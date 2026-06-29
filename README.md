@@ -1,0 +1,2 @@
+# Stock-reminder-app
+twelve dataのAPIを使用してお気に入り登録した株の株価情報を自分のメールに通知するWebアプリ
