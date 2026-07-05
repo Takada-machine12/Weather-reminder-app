@@ -1,0 +1,4 @@
+# 開発用ファイル
+dev/config_local.php
+# Mac OS
+.DS_Store
