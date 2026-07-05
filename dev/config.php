@@ -5,7 +5,7 @@ define('COPYRIGHT','&copy; TKD');
 
 if (file_exists(__DIR__.'/config_local.php')) { // 絶対パス
     // ファイルが存在すれば、開発用ファイルを読み込む
-    require_once(__DIR__.'config_local.php');
+    require_once(__DIR__.'/config_local.php');
 } else {
     // ファイルが存在しなkれば、ダミー用変数を設定
     //GitHub用のダミー値設定
