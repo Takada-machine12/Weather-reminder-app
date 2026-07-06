@@ -5,6 +5,91 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+//Session宣言
+session_start();
+
+//リクエスト処理
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    //初めてアクセスした時の処理(GET)
+    //CSRF対策
+    setToken();
+} else {
+    //CSRF対策
+    checkToken();
+
+    //フォームからサブミットされた時の処理(POST)
+    //ユーザ情報を取得し変数化
+    $user_name = $_POST['user_name'];
+    $user_email = $_POST['user_email'];
+    $user_password = $_POST['user_password'];
+
+    //エラー処理のための変数化(配列で保持)
+    $error = array();
+
+    //DB接続(PDO方式)関数
+    $pdo = connectDb();
+
+    //ユーザーの氏名入力チェック処理
+    if ($user_name == '') {
+        $error['user_name'] = '氏名を入力してください。';
+    }
+    //ユーザーのメールアドレス入力チェック処理
+    if ($user_email == '') {
+        $error['user_email'] = 'メールアドレスを入力してください。';
+    } elseif (!filter_var($user_email,FILTER_VALIDATE_EMAIL)) {
+        $error['user_email'] = '形式が正しくありません。正しい形式のメールアドレスを入力してください。';
+    } else {
+        if (checkEmail($user_email,$pdo)) {
+            $error['user_email'] = 'このメールアドレスは既に登録されています。';
+        }
+    }
+    //ユーザーのパスワード入力チェック処理
+    if ($user_password == '') {
+        $error['user_password'] = 'パスワードを入力してください。';
+    }
+
+    if (empty($error)) {
+        $sql = 'insert into 
+                users (user_name,user_email,user_password,delivery_hour_am,delivery_hour_pm,created_at,updated_at) 
+                values (:user_name,:user_email,:user_password,99,99,now(),now())';
+        $stmt = $pdo->prepare($sql);
+
+        //データを設定しSQLを実行
+        $stmt->execute(array(
+                        ':user_name'=>$user_name,
+                        ':user_email'=>$user_email,
+                        ':user_password'=>password_hash($user_password, PASSWORD_DEFAULT) //パスワードハッシュ化
+                    ));
+
+        //自動ログイン機能
+        //getUser関数で検索
+        $user = getUser($user_email, $pdo);
+
+        //ユーザ情報をSessionに保存
+        $_SESSION['USER'] = $user;
+        //Session固定攻撃対策(ID書き換え)
+        session_regenerate_id(true);
+        //DB接続終了
+        unset($pdo);
+
+        //管理者にメール通知
+        $to = HOST_MAIL;
+        $subject = SUBJECT;
+        $message = '氏名:'.$user['user_name'].PHP_EOL;
+        $message .= 'メールアドレス:'.$user['user_email'];
+        $header = 'From: '.HOST_MAIL;
+        mb_language("Japanese");
+        mb_internal_encoding("UTF-8");
+        mb_send_mail($to,$subject,$message,$header);
+
+        //登録完了画面に遷移
+        header('Location: '.SITE_URL.'/signup_complete.php');
+
+        //処理終了
+        exit;
+    }
+    unset($pdo);
+}
 ?>
 
 <!DOCTYPE html>
@@ -30,7 +115,7 @@ require_once('functions.php');
 
         <div class="container">
             <h1>ユーザー登録</h1>
-            <form method="POST" class="panel panel-default panel-body" action="signup_complete.php">
+            <form method="POST" class="panel panel-default panel-body">
                 <div class="form-group <?php echo !empty($error['user_name']) ? 'has-error':''; ?>">
                     <label>氏名</label>
                     <input type="text" name="user_name" class="form-control" value="<?php echo xss($user_name ?? ''); ?>" placeholder="氏名" />
