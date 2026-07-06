@@ -7,7 +7,7 @@ if (file_exists(__DIR__.'/config_local.php')) { // 絶対パス
     // ファイルが存在すれば、開発用ファイルを読み込む
     require_once(__DIR__.'/config_local.php');
 } else {
-    // ファイルが存在しなkれば、ダミー用変数を設定
+    // ファイルが存在しなければ、ダミー用変数を設定
     //GitHub用のダミー値設定
     define('SITE_URL','サイトURL');
     define('HOST','ホスト名');
@@ -19,6 +19,5 @@ if (file_exists(__DIR__.'/config_local.php')) { // 絶対パス
     define('SUBJECT_UPDATE', '更新された時のメッセージ');
     define('ADMIN_ID', '管理者ログインID');
     define('ADMIN_PASSWORD', '管理者ログインパスワード');
-    define('YOUTUBE_API_KEY','YoutubeのAPIキー');
 }
 ?>
