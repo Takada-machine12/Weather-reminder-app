@@ -9,7 +9,7 @@ require_once('functions.php');
 session_start();
 
 //リクエスト処理
-if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     //初めてアクセスした時の処理(GET)
     //CSRF対策
     setToken();
