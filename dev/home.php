@@ -5,6 +5,70 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (isset($_SESSION['USER'])) {
+    //既にログイン済み
+} elseif (!isset($_SESSION['USER']) && !empty($_COOKIE['WEATHER'])) {
+    //DB接続
+    $pdo = connectDb();
+    //変数設定
+    $raw_token = $_COOKIE['WEATHER'];
+    $token_hash = hash('sha256',$raw_token);
+
+    //トークンとDBを照合(有効期限も確認)
+    $sql = 'select * from auto_login where c_key = :c_key and expire > :expire';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute((array(
+                    ':c_key'=>$token_hash,
+                    ':expire'=>date('Y-m-d H:i:s'))));
+    $auto_login_data = $stmt->fetch();
+
+    if ($auto_login_data) {
+        //ユーザ情報を取得してセッションにセット
+        $login_user = getUserbyUserId($auto_login_data['user_id'], $pdo);
+
+        if (!$login_user) {
+            delete_auto_login($raw_token);
+            header('Location:'.SITE_URL.'/index.php');
+            exit;
+        }
+        session_regenerate_id(true);
+        $_SESSION['USER'] = $login_user;
+
+        unset($pdo);
+    } else {
+        //トークンはあるけどDBとの照合が失敗した時
+        delete_auto_login($raw_token);
+        
+        header('Location:'.SITE_URL.'/index.php');
+        exit;
+    }
+} else {
+    //どちらにも当てはまらなければ、index.phpに遷移
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+//セッション情報を取得
+$user = $_SESSION['USER'];
+
+setToken();
+
+$pdo = connectDb();
+
+//SQL(お知らせ情報取得)
+$sql1 = 'select news_text from admin_info';
+$stmt = $pdo->prepare($sql1);
+$stmt->execute();
+$admin_news = $stmt->fetch(PDO::FETCH_ASSOC);
+
+//SQL(投稿情報取得)
+$sql2 = 'select cron_message, created_at from cron_log where user_id = :user_id order by created_at desc limit 10';
+$stmt = $pdo->prepare($sql2);
+$stmt->execute(array(':user_id'=>$user['id']));
+$cron_message = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -25,7 +89,12 @@ require_once('functions.php');
                 <div class="container">
                     <a class="navbar-brand" href="<?php echo SITE_URL; ?>"><?php echo SERVICE_SHORT_NAME; ?></a>
                     <ul class="nav navbar-nav">
-                        <li class="active"><a href="./logout.php">ログアウト</a></li>
+                        <li>
+                            <form action="logout.php" method="POST">
+                                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']); ?>">
+                                <input type="submit" value="ログアウト" class="btn btn-link navbar-btn">
+                            </form>
+                        </li>
                     </ul><!-- ul -->
                 </div><!-- container -->
             </div><!-- navbar-inner -->
@@ -34,14 +103,18 @@ require_once('functions.php');
         <div class="container">
             <h1>MENU</h1>
             <p>
-                <h4>ようこそ、<?php echo 'ユーザ'; //$_SESSION['USER']['user_name']; ?>さん!</h4>
+                <h4>ようこそ、<?php echo $_SESSION['USER']['user_name']; ?>さん!</h4>
             </p>
             <div class="panel panel-default">
                 <div class="panel-heading">
                     管理者からのお知らせ
                 </div>
                 <div class="panel-body">
-                    <?php echo 'お知らせ'; //nl2br(xss($admin_news['news_text'])); ?>
+                    <?php if ($admin_news):?>
+                        <?php echo nl2br(xss($admin_news['news_text'])); ?>
+                    <?php else:?>
+                        お知らせはありません。
+                    <?php endif;?>
                 </div>
             </div>
 
@@ -50,11 +123,11 @@ require_once('functions.php');
                     実行ログ
                 </div>
                 <div class="panel-body">
-                    <//?php foreach($cron_message as $log):?>
-                        <?php echo 'メッセージ'; //xss($log['cron_message']); ?><br >
-                        <?php echo 'メッセージ'; //xss($log['created_at']); ?><br >
+                    <?php foreach($cron_message as $log):?>
+                        <?php echo xss($log['cron_message']); ?><br >
+                        <?php echo xss($log['created_at']); ?><br >
                         <p>-----------------------------------------</p>
-                    <//?php endforeach; ?>
+                    <?php endforeach; ?>
                 </div>
             </div>
             

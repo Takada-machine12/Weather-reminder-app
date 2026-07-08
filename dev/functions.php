@@ -94,8 +94,11 @@ function setToken() {
 
 //CSRF対策(生成したトークンをチェック)
 function checkToken() {
-    if (empty($_SESSION['sstoken'] || $_SESSION['sstoken'] != $_POST['token'])) {
-        echo '<html><head><meta charset="utf-8"></head><body>不正なアクセスです。</body></html>';
+    $session_token = $_SESSION['sstoken'] ?? '';
+    $posted_token = $_POST['token'] ?? '';
+    if ($session_token === '' || !hash_equals($session_token,$posted_token)) {
+        http_response_code(403);
+        echo '不正なアクセスです。';
         exit;
     }
 }
@@ -110,14 +113,28 @@ function getUserbyUserId($user_id,$pdo) {
     return $user ? $user : false;
 }
 
-// ランダム文字列生成 (英数字)
-function makeRandStr($length)
-{
+//ランダム文字列生成 (英数字)
+function makeRandStr($length) {
     $str = array_merge(range('a', 'z'), range('0', '9'), range('A', 'Z'));
     $r_str = null;
     for ($i = 0; $i < $length; $i++) {
         $r_str .= $str[rand(0, count($str) - 1)];
     }
     return $r_str;
+}
+
+//オートログインデリート
+function delete_auto_login($c_key) {
+    //DBから削除
+    //受け取った生のCookieをハッシュ化
+    $token_hash = hash('sha256',$c_key);
+    $pdo = connectDb();
+    $sql = 'delete from auto_login where c_key = :c_key';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array(':c_key'=>$token_hash));
+    unset($pdo);
+
+    //Cookieを削除
+    setcookie('WEATHER', '', time()-86400, COOKIE_PATH);
 }
 ?>
