@@ -1,5 +1,8 @@
 <?php
 //エラーメッセージ表示処理
+
+use PhpXmlRpc\Helper\Charset;
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 //ファイルをインポート
@@ -9,16 +12,17 @@ require_once('config.php');
 function connectDb() {
     //DB接続(PDO方式)
     //パラメータ設定
-    $param = 'mysql:dbname='.DB_NAME.';host='.HOST;
+    $param = 'mysql:dbname='.DB_NAME.';host='.HOST.';charset=utf8mb4';
     try {
-        //接続
-        $pdo = new PDO($param,USER,PASS);
-        //文字コード設定
-        $pdo->query('set names utf8');
-        return $pdo;
+        return new PDO($param, USER, PASS, [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, //例外をキャッチしやすくするため
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, //データ取得時、綺麗な配列で返してくれる
+            PDO::ATTR_EMULATE_PREPARES => false, //SQLインジェクション対策(勝手にPHP側で処理をさせないため、文字コードを利用した攻撃を防ぐため)
+        ]);
     } catch (PDOException $e) {
-        echo $e->getMessage();
-        exit;
+        error_log($e -> getMessage());
+        http_response_code(500);
+        exit('システムエラーが発生しました。');
     }
 }
 //メールアドレス存在チェック
@@ -84,18 +88,22 @@ function xss($original_str) {
     return htmlspecialchars($original_str,ENT_QUOTES,"UTF-8");
 }
 
+//暗号学的に安全なランダムトークンを生成
+function generateToken($bytes = 32) {
+    return bin2hex(random_bytes($bytes));
+}
+
 //CSRF対策(トークン生成)
 function setToken() {
-    //ランダムな文字列を生成し変数化
-    $token = sha1(uniqid(mt_rand(), true));
     //Sessionに生成したトークンを保存
-    $_SESSION['sstoken'] = $token;
+    $_SESSION['sstoken'] = generateToken(32);
 }
 
 //CSRF対策(生成したトークンをチェック)
 function checkToken() {
     $session_token = $_SESSION['sstoken'] ?? '';
     $posted_token = $_POST['token'] ?? '';
+
     if ($session_token === '' || !hash_equals($session_token,$posted_token)) {
         http_response_code(403);
         echo '不正なアクセスです。';

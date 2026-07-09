@@ -110,7 +110,7 @@ $cron_message = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     管理者からのお知らせ
                 </div>
                 <div class="panel-body">
-                    <?php if ($admin_news):?>
+                    <?php if (!empty($admin_news['news_text'])):?>
                         <?php echo nl2br(xss($admin_news['news_text'])); ?>
                     <?php else:?>
                         お知らせはありません。
@@ -123,11 +123,15 @@ $cron_message = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     実行ログ
                 </div>
                 <div class="panel-body">
-                    <?php foreach($cron_message as $log):?>
-                        <?php echo xss($log['cron_message']); ?><br >
-                        <?php echo xss($log['created_at']); ?><br >
-                        <p>-----------------------------------------</p>
-                    <?php endforeach; ?>
+                    <?php if ($cron_message):?>
+                        <?php foreach($cron_message as $log):?>
+                            <?php echo xss($log['cron_message']); ?><br >
+                            <?php echo xss($log['created_at']); ?><br >
+                            <p>-----------------------------------------</p>
+                        <?php endforeach; ?>
+                    <?php else:?>
+                        実行ログはありません。
+                    <?php endif;?>
                 </div>
             </div>
             
