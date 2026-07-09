@@ -31,6 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             //自動ログイン照合
             $user = getUserbyUserId($auto_login_user['user_id'],$pdo);
 
+            //無ければindex.phpに自動遷移
+            if (!$user) {
+                delete_auto_login($raw_token);
+                header('Location:'.SITE_URL.'/index.php');
+                exit;
+            }
+
             //Session固定攻撃対策(ID書き換え)
             session_regenerate_id(true);
             //ログイン情報をSessionに保存
@@ -39,6 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             //HOME画面に遷移
             header('Location:'.SITE_URL.'/home.php');
             unset($pdo);
+            exit;
+        } else {
+            //トークンはあるけど、DB照合が失敗した時
+            delete_auto_login($raw_token);
+
+            header('Location:'.SITE_URL.'/index.php');
             exit;
         }
     }
@@ -111,22 +124,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     //ユーザログイン成功時
     if ($is_user_submit && empty($error)) {
 
-        //Sessionハイジャック対策(ID書き換え)
+        //Session固定攻撃対策(ID書き換え)
         session_regenerate_id(true);
         //ログイン情報を保存するためにSessionに保存
         $_SESSION['USER'] = $user;
-        $auto_login = $_POST['auto_login'];
+        $auto_login = $_POST['auto_login'] ?? '';
 
         //一度Cookie情報をクリア(ゴミを残さないように)
         if (isset($_COOKIE['WEATHER'])) {
-            //古いキーを取得
+            //古いキーを削除
             delete_auto_login($_COOKIE['WEATHER']);
         }
 
         //自動ログインの場合は以下処理実行
         if ($auto_login) {
             //自動ログインキー生成
-            $c_key = sha1(uniqid(mt_rand(), true));
+            $c_key = bin2hex(random_bytes(32));
             $token_hash = hash('sha256', $c_key);
 
             //Cookie情報保存
@@ -236,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
                                 <div class="form-group <?php echo !empty($error['user_email']) ? 'has-error':''; ?>">
                                     <label>メールアドレス</label>
-                                    <input type="email" class="form-control" name="user_email" value="" placeholder="メールアドレス" />
+                                    <input type="email" class="form-control" name="user_email" value="<?php echo xss($user_email ?? ''); ?>" placeholder="メールアドレス" />
                                     <span class="help-block"><?php echo $error['user_email'] ?? ''; ?></span>
                                 </div><!-- form-group -->
 
@@ -267,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                             <h2 class="panel-title">管理者ログイン</h2>
                         </div><!-- panel-heading -->
                         <div class="panel-body">
-                            <form method="POST" action="admin_home.php">
+                            <form method="POST">
 
                                 <div class="form-group <?php echo !empty($error['admin_account']) ? 'has-error':''; ?>">
                                     <label>管理者アカウント名</label>

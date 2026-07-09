@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 //CSRF対策
 checkToken();
 
-if (!empty($_COOKIE['WEATHER'])) {
+if (isset($_COOKIE['WEATHER'])) {
     delete_auto_login($_COOKIE['WEATHER']);
 }
 
