@@ -38,6 +38,16 @@ function checkEmail($user_email, PDO $pdo):bool {
 
     return $user ? true : false;
 }
+
+//ユーザ情報編集時のメールアドレス存在チェック
+function checkUserEmail($user_email, $id, PDO $pdo):bool {
+    $sql = 'select * from users where user_email = :user_email and id <> :id limit 1';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array(':user_email'=>$user_email, ':id'=>$id));
+    $user = $stmt->fetch();
+
+    return $user ? true : false;
+}
 //メールアドレスとパスワードからuserを検索する
 function getUser($user_email, $pdo) {
     $sql = 'select * from users where user_email = :user_email limit 1';
