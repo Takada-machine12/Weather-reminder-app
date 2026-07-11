@@ -30,11 +30,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $pdo = connectDb();
 
     //ユーザーの氏名入力チェック処理
-    if ($user_name == '') {
+    if ($user_name === '') {
         $error['user_name'] = '氏名を入力してください。';
+    } else {
+            if (strlen(mb_convert_encoding($user_name, 'SJIS', 'UTF-8')) > 30 ) {
+                $error['user_name'] = 'ユーザー名は30文字以内で入力してください。';
+            }
     }
     //ユーザーのメールアドレス入力チェック処理
-    if ($user_email == '') {
+    if ($user_email === '') {
         $error['user_email'] = 'メールアドレスを入力してください。';
     } elseif (!filter_var($user_email,FILTER_VALIDATE_EMAIL)) {
         $error['user_email'] = '形式が正しくありません。正しい形式のメールアドレスを入力してください。';
@@ -44,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         }
     }
     //ユーザーのパスワード入力チェック処理
-    if ($user_password == '') {
+    if ($user_password === '') {
         $error['user_password'] = 'パスワードを入力してください。';
     }
 

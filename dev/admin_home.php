@@ -5,6 +5,20 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (!isset($_SESSION['ADMIN_USER'])) {
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+
+//セッション情報を取得
+$admin_user = $_SESSION['ADMIN_USER'];
+
+//CSRF対策
+setToken();
 ?>
 
 <!DOCTYPE html>
@@ -26,7 +40,12 @@ require_once('functions.php');
                 <div class="container">
                     <a class="navbar-brand" href="<?php echo SITE_URL; ?>"><?php echo SERVICE_SHORT_NAME; ?></a>
                     <ul class="nav navbar-nav">
-                        <li class="active"><a href="./admin_logout.php">ログアウト</a></li>
+                        <li>
+                            <form action="admin_logout.php" method="POST">
+                                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']); ?>">
+                                <input type="submit" value="ログアウト" class="btn btn-link navbar-btn">
+                            </form>
+                        </li>
                     </ul><!-- ul -->
                 </div><!-- container -->
             </div><!-- navbar-inner -->

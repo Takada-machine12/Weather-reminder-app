@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     //ユーザフォーム送信時のみ、ユーザ用バリデーションを実行する
     if ($is_user_submit) {
         //メールアドレス入力チェック処理
-        if ($user_email  == '') {
+        if ($user_email  === '') {
             $error['user_email'] = 'メールアドレスを入力してください。';
         } elseif (!filter_var($user_email,FILTER_VALIDATE_EMAIL)) {
             $error['user_email'] = '形式が正しくありません。正しい形式のメールアドレスを入力してください。';
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             }
         }
         //パスワード入力チェック処理
-        if ($user_password == '') {
+        if ($user_password === '') {
             $error['user_password'] = 'パスワードを入力してください。';
         } else {
             if ($user_email && $user_password) {
@@ -103,11 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     // 管理者フォーム送信時のみ、管理者用バリデーションを実行する
     if ($is_admin_submit) {
         //管理者のアカウント名入力チェック処理
-        if ($admin_account == '') {
+        if ($admin_account === '') {
             $error['admin_account'] = 'アカウント名を入力してください。';
         }
         //管理者のパスワード入力チェック処理
-        if ($admin_password == '') {
+        if ($admin_password === '') {
             $error['admin_password'] = 'パスワードを入力してください。';
         } else {
             if ($admin_account && $admin_password) {

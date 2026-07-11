@@ -5,6 +5,69 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (!isset($_SESSION['ADMIN_USER'])) {
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+
+//セッション情報を取得
+$admin_user = $_SESSION['ADMIN_USER'];
+$error = array();
+$news_text = '';
+$complete_message = '';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    //CSRF対策
+    setToken();
+
+    //現在のお知らせ情報を取得
+    //DB接続
+    $pdo = connectDb();
+
+    //SQL
+    $sql = 'select news_text from admin_info where id = :id';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array(':id'=>$admin_user['id']));
+    $news_text = $stmt->fetch();
+
+    unset($pdo);
+} else {
+    //CSRF対策
+    checkToken();
+
+    //DB接続
+    $pdo = connectDb();
+
+    //お知らせ情報取得
+    $news_text = $_POST['news_text'] ?? '';
+
+    $error = array();
+
+    //バリデーションチェック
+    if ($news_text === '') {
+        $error['news_text'] = 'お知らせを登録してください。';
+    }
+
+    if (empty($error)) {
+        $sql = 'update admin_info
+                set
+                news_text = :news_text,
+                updated_at = now()
+                where id = :id';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array(
+                        ':news_text'=>$news_text,
+                        ':id'=>$admin_user['id']
+                    ));
+        //登録完了メッセージ
+        $complete_message = 'お知らせ登録が完了しました。';
+    }
+    unset($pdo);
+}
 ?>
 
 <!DOCTYPE html>
@@ -28,7 +91,12 @@ require_once('functions.php');
                     <ul class="nav navbar-nav">
                         <li class="active"><a href="./admin_user_news.php">お知らせ登録</a></li>
                         <li><a href="./admin_user_list.php">ユーザー登録一覧</a></li>
-                        <li><a href="./admin_logout.php">ログアウト</a></li>
+                        <li>
+                            <form action="admin_logout.php" method="POST">
+                                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']); ?>">
+                                <input type="submit" value="ログアウト" class="btn btn-link navbar-btn">
+                            </form>
+                        </li>
                     </ul><!-- ul -->
                 </div><!-- container -->
             </div><!-- navbar-inner -->
@@ -36,18 +104,18 @@ require_once('functions.php');
 
         <div class="container">
             <h1>お知らせ登録画面</h1>
-            <//?php if ($complete_msg): ?>
+            <?php if ($complete_message): ?>
                 <div class="alert alert-success">
-                    <?php echo '登録完了'; //$complete_msg; ?>
+                    <?php echo $complete_message; ?>
                 </div>
-            <//?php endif; ?>
+            <?php endif; ?>
             <div class="alert alert-info">
                 ユーザーへのお知らせを登録してください。
             </div>
             <form method="POST" class="panel panel-default panel-body">
-                <div class="form-group <//?php if(!empty($error['news_text'])) {echo "has-error";} ?>">
+                <div class="form-group <?php if(!empty($error['news_text'])) {echo "has-error";} ?>">
                     <label>ユーザーへのお知らせ</label>
-                    <textarea class="form-control" name="news_text" placeholder="ユーザーへのお知らせ"><?//php echo xss($news_text); ?></textarea>
+                    <textarea class="form-control" name="news_text" placeholder="ユーザーへのお知らせ"><?php echo xss($news_text['news_text'] ?? ''); ?></textarea>
                     <span class="help-block"><?php echo $error['news_text'] ?? ''; ?></span>
                 </div><!-- form-group -->
 
@@ -55,7 +123,7 @@ require_once('functions.php');
                     <input type="submit" class="btn btn-success btn-block" value="登録" />
                 </div><!-- form-group -->
                 <!-- トークンをPOSTで送信 -->
-                <input type="hidden" name="token" value="<//?php echo xss($_SESSION['sstoken'] ?? ''); ?>" />
+                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken'] ?? ''); ?>" />
             </form>
             <a href="./admin_home.php">戻る</a>
             <hr>
