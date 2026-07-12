@@ -50,7 +50,6 @@ try {
 
     $complete_message = 'ユーザー情報を削除しました。';
 
-    unset($pdo);
     $_SESSION = [];
 
     //Cookie無効化
