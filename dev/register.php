@@ -5,6 +5,82 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (!isset($_SESSION['USER'])) {
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+
+$user = $_SESSION['USER'];
+
+$error = array();
+$complete_message = '';
+
+//通知時間設定
+//午前の通知時間
+$delivery_hours_am = array(
+    "99" => "しない",
+    "9" => "9時",
+    "12" => "12時",
+);
+//午後の通知時間
+$delivery_hours_pm = array(
+    "99" => "しない",
+    "18" => "18時",
+    "21" => "21時",
+);
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    //CSRF対策
+    setToken();
+
+    $delivery_hour_am = $user['delivery_hour_am'];
+    $delivery_hour_pm = $user['delivery_hour_pm'];
+
+    if (isset($_GET['complete'])) {
+        $complete_message = '通知の登録が完了しました。';
+    }
+} else {
+    //CSRF対策
+    checkToken();
+
+    $id = (int)$user['id'];
+    $delivery_hour_am = $_POST['delivery_hour_am'];
+    $delivery_hour_pm = $_POST['delivery_hour_pm'];
+
+    //DB接続
+    $pdo = connectDb();
+
+    //通知時間
+    $sql = 'update users
+            set
+            delivery_hour_am = :delivery_hour_am,
+            delivery_hour_pm = :delivery_hour_pm,
+            updated_at = now()
+            where id = :id
+            ';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array(
+                    ':delivery_hour_am'=>$delivery_hour_am,
+                    ':delivery_hour_pm'=>$delivery_hour_pm,
+                    ':id'=>$id
+                    ));
+    unset($pdo);
+    $complete_message = '通知の登録が完了しました。';
+
+    //Session情報更新
+    $user['delivery_hour_am'] = $delivery_hour_am;
+    $user['delivery_hour_pm'] = $delivery_hour_pm;
+    $_SESSION['USER'] = $user;
+
+    //更新後リダイレクト
+    header('Location: register.php?complete=1');
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -38,19 +114,27 @@ require_once('functions.php');
 
         <div class="container">
             <h1>設定</h1>
-            <//?php if ($complete_msg): ?>
+            <?php if ($complete_message): ?>
                 <div class="alert alert-success">
-                    <?php echo '$complete_msg'; ?>
+                    <?php echo $complete_message; ?>
                 </div>
-            <//?php endif; ?>
+            <?php endif; ?>
             <div class="alert alert-info">
                 何時に投稿するか投稿時間を設定してください。
             </div>
-            <form method="POST" class="panel panel-default panel-body" action="register.php">
-                <div class="form-group <//?php if(!empty($error['delivery_hour'])) {echo "has-error";} ?>">
-                    <label>メール通知</label>
-                    <?php echo '選択'; //arrayToSelect("delivery_hour", '$delivery_hours_array', $user['delivery_hour']); ?>
-                    <span class="help-block"><?php echo 'エラー表示'; //$error['delivery_hour'] ?? ''; ?></span>
+            <form method="POST" class="panel panel-default panel-body">
+                <!-- 午前の通知時間設定 -->
+                <div class="form-group <?php if(!empty($error['delivery_hour_am'])) {echo "has-error";} ?>">
+                    <label>午前の通知時間</label>
+                    <?php echo arrayToSelect("delivery_hour_am", $delivery_hours_am, $user['delivery_hour_am']); ?>
+                    <span class="help-block"><?php echo $error['delivery_hour_am'] ?? ''; ?></span>
+                </div><!-- form-group -->
+
+                <!-- 午後の通知時間設定 -->
+                <div class="form-group <?php if(!empty($error['delivery_hour_pm'])) {echo "has-error";} ?>">
+                    <label>午後の通知時間</label>
+                    <?php echo arrayToSelect("delivery_hour_pm", $delivery_hours_pm, $user['delivery_hour_pm']); ?>
+                    <span class="help-block"><?php echo $error['delivery_hour_pm'] ?? ''; ?></span>
                 </div><!-- form-group -->
 
                 <div class="form-group">

@@ -44,6 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $user_name = $user['user_name'];
     $user_email = $user['user_email'];
     $user_password = $user['user_password'];
+    
+    if (isset($_GET['complete'])) {
+        $complete_message = 'ユーザー情報を変更しました。';
+    }
 
     unset($pdo);
 } else {
@@ -136,6 +140,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                                 ':user_email'=>$user_email,
                             ));
                 $complete_message = 'ユーザー情報が変更されました。';
+                //更新後リダイレクト
+                header('Location: admin_user_edit.php?id='.$id.'complete=1');
+
+                unset($pdo);
             } else {
                 //SQL
                 $sql = 'update users
@@ -154,6 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                                 ':user_password'=>password_hash($user_password,PASSWORD_DEFAULT)
                             ));
                 $complete_message = 'ユーザー情報が変更されました。';
+                //更新後リダイレクト
+                header('Location: admin_user_edit.php?complete=1');
 
                 unset($pdo);
             }
