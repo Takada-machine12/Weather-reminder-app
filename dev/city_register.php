@@ -5,6 +5,64 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+require_once(__DIR__.'/prefectures.php');
+require_once(__DIR__.'/city.php');
+
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (!isset($_SESSION['USER'])) {
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+
+$user = $_SESSION['USER'];
+
+//変数初期化
+$error = array();
+$complete_message = '';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    //CSRF対策
+    setToken();
+
+    if (isset($_GET['complete'])) {
+        $complete_message = '地域の登録が完了しました。';
+    }
+
+    //変数初期化
+    $pref_no = 99;
+    $city = $cities[99];
+} else {
+    //CSRF対策
+    checkToken();
+
+    $pref_no = (int)($_POST['pref']) ?? 99; //デフォルトは99
+    $city = $cities[$pref_no] ?? 99;
+
+    //「決定」ボタンと「登録」ボタンで処理内容を分ける
+    if (isset($_POST['select'])) {
+        //「決定」ボタン押下時、都道府県Noで市区町村名を逆引きで取得
+        $city = $cities[$pref_no];
+    } elseif (isset($_POST['register'])) {
+        //「登録」ボタン押下時、DBに情報を登録
+        //DB接続
+        $pdo = connectDb();
+        //SQL
+        $sql = 'insert into weather_setting (user_id, prefecture, city, city_id, created_at, updated_at)
+                values(:user_id, :prefecture, :city, :city_id, now(), now())';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array(
+                        ':user_id'=>$user['id'],
+                        ':prefecture'=>$prefectures[$pref_no],
+                        ':city'=>$cities[$pref_no][$_POST['city']],
+                        ':city_id'=>$_POST['city']
+                    ));
+        unset($pdo);
+        $complete_message = '地域の登録が完了しました。';
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -30,7 +88,12 @@ require_once('functions.php');
                         <li><a href="./weather_list.php">お天気情報一覧</a></li>
                         <li><a href="./register.php">通知時間設定</a></li>
                         <li><a href="./user_edit.php">ユーザー情報設定</a></li>
-                        <li><a href="./logout.php">ログアウト</a></li>
+                        <li>
+                            <form action="logout.php" method="POST">
+                                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']); ?>">
+                                <input type="submit" value="ログアウト" class="btn btn-link navbar-btn">
+                            </form>
+                        </li>
                     </ul><!-- ul -->
                 </div><!-- container -->
             </div><!-- navbar-inner -->
@@ -38,34 +101,32 @@ require_once('functions.php');
 
         <div class="container">
             <h1>地域登録画面</h1>
-            <//?php if ($complete_msg): ?>
+            <?php if ($complete_message): ?>
                 <div class="alert alert-success">
-                    <?php echo '$complete_msg'; ?>
+                    <?php echo $complete_message; ?>
                 </div>
-            <//?php endif; ?>
+            <?php endif; ?>
             <div class="alert alert-info">
                 お住まいの地域を選んで登録してください。
             </div>
             <form method="POST" class="panel panel-default panel-body">
-                <div class="form-group <?php if(!empty($error['youtube_category'])) {echo "has-error";} ?>">
+                <!-- 都道府県 -->
+                <div class="form-group <?php if(!empty($error['prefecture'])) {echo "has-error";} ?>">
                     <label>お住まいの地域を設定(都道府県)</label>
-                    <?php echo '都道府県を選択'; //arrayToSelect("youtube_category", $youtube_movies_array, $user['youtube_category']); ?>
-                    <select class="form-control" name="prefecture">
-                        <option>東京都</option>
-                    </select>
-                    <span class="help-block"><?php echo $error['pref'] ?? ''; ?></span>
+                    <?php echo arrayToSelect('pref', $prefectures, $pref_no); ?>
+                    <span class="help-block"><?php echo $error['prefecture'] ?? ''; ?></span>
+                    <button name="select" class="btn" type="submit">決定</button>
                 </div><!-- form-group -->
-                <div class="form-group <?php if(!empty($error['youtube_category'])) {echo "has-error";} ?>">
+
+                <!-- 市区町村 -->
+                <div class="form-group <?php if(!empty($error['city'])) {echo "has-error";} ?>">
                     <label>お住まいの地域を設定(市区町村)</label>
-                    <?php echo '市区町村を選択'; //arrayToSelect("youtube_category", $youtube_movies_array, $user['youtube_category']); ?>
-                    <select class="form-control" name="prefecture">
-                        <option>千代田区</option>
-                    </select>
+                    <?php echo arrayToSelect('city', $city, $pref_no); ?>
                     <span class="help-block"><?php echo $error['city'] ?? ''; ?></span>
                 </div><!-- form-group -->
 
                 <div class="form-group">
-                    <input type="submit" class="btn btn-success btn-block" value="登録" />
+                    <input type="submit" name="register" class="btn btn-success btn-block" value="登録" />
                 </div><!-- form-group -->
                 <!-- トークンをPOSTで送信 -->
                 <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken'] ?? ''); ?>" />
