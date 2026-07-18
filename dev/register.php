@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 <html lang="ja">
     <head>
         <meta charset="utf-8" />
-        <title>ブログの設定画面 | <?php echo SERVICE_NAME; ?></title>
+        <title>通知時間設定画面 | <?php echo SERVICE_NAME; ?></title>
         <meta name="description" content="登録した地域のお天気情報を自動で取得、通知できるシステム。自動投稿システム" />
         <meta name="keywords" content="自動通知" />
         <link href="../css/bootstrap.min.css" rel="stylesheet">
@@ -106,14 +106,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                         <li><a href="./weather_list.php">お天気情報一覧</a></li>
                         <li class="active"><a href="./register.php">通知時間設定</a></li>
                         <li><a href="./user_edit.php">ユーザー情報設定</a></li>
-                        <li><a href="./logout.php">ログアウト</a></li>
+                        <li>
+                            <form action="logout.php" method="POST">
+                                <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']); ?>">
+                                <input type="submit" value="ログアウト" class="btn btn-link navbar-btn">
+                            </form>
+                        </li>
                     </ul><!-- ul -->
                 </div><!-- container -->
             </div><!-- navbar-inner -->
         </div><!-- navbar-inverse -->
 
         <div class="container">
-            <h1>設定</h1>
+            <h1>通知時間設定</h1>
             <?php if ($complete_message): ?>
                 <div class="alert alert-success">
                     <?php echo $complete_message; ?>
