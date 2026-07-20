@@ -7,6 +7,7 @@ require_once('config.php');
 require_once('functions.php');
 require_once(__DIR__.'/prefectures.php');
 require_once(__DIR__.'/city.php');
+require_once(__DIR__.'/weather_api.php');
 
 //Session宣言
 session_start();
@@ -59,6 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                         ':city'=>$cities[$pref_no][$_POST['city']],
                         ':city_id'=>$_POST['city']
                     ));
+
+        //天気情報取得関数呼び出し
+        //DBへデータを格納
+        updateWeatherData($user['id'],$_POST['city'],$pdo);
+
         unset($pdo);
         $complete_message = '地域の登録が完了しました。';
     }
