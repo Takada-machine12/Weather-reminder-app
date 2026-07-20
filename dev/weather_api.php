@@ -112,41 +112,89 @@ function updateWeatherData ($user_id, $city_id, PDO $pdo) {
             ));
 
         if ($stmt->rowCount() === 0) {
-            $weather_insert = 'insert into weather_setting 
-                            ( 
-                            user_id,prefecture,city,city_id,weather,min_temperature,max_temperature,precipitation_t00_06,
-                            precipitation_t06_12,precipitation_t12_18, precipitation_t18_24,wind_speed,wind_direction,public_time,
-                            public_time_formatted,headline, bodytext,text,date,date_label,created_at,updated_at 
-                            ) 
-                            values 
-                            ( 
-                            :user_id,:prefecture,:city,:city_id,:weather,:min_temperature,:max_temperature,:precipitation_t00_06,
-                            :precipitation_t06_12,:precipitation_t12_18, :precipitation_t18_24,:wind_speed,:wind_direction,:public_time,
-                            :public_time_formatted,:headline, :bodytext,:text,:date,:date_label,now(),now() 
-                            )';
-            $stmt = $pdo->prepare($weather_insert);
-            $stmt->execute(array( 
-                            ':user_id'=>$user_id, 
-                            ':prefecture'=>$user_info['prefecture'], 
-                            ':city'=>$user_info['city'],
-                            ':city_id'=>$city_id,
-                            ':weather'=>$weather, 
-                            ':min_temperature'=>$min_temp, 
-                            ':max_temperature'=>$max_temp, 
-                            ':precipitation_t00_06'=>$chance_of_rain_0006, 
-                            ':precipitation_t06_12'=>$chance_of_rain_0612, 
-                            ':precipitation_t12_18'=>$chance_of_rain_1218, 
-                            ':precipitation_t18_24'=>$chance_of_rain_1824, 
-                            ':wind_speed'=>$wind_speed, 
-                            ':wind_direction'=>$wind_direction, 
-                            ':public_time'=>$public_time, 
-                            ':public_time_formatted'=>$public_time_formatted, 
-                            ':headline'=>$head_line_text, 
-                            ':bodytext'=>$body_text, 
-                            ':text'=>$text, 
-                            ':date'=>$date,
-                            ':date_label'=>$date_label
+            //date=NULLのレコードがない場合は同日のレコードを更新
+            $weather_today = 'update weather_setting
+                                set
+                                weather = :weather,
+                                min_temperature = :min_temperature,
+                                max_temperature = :max_temperature,
+                                precipitation_t00_06 = :precipitation_t00_06,
+                                precipitation_t06_12 = :precipitation_t06_12,
+                                precipitation_t12_18 = :precipitation_t12_18,
+                                precipitation_t18_24 = :precipitation_t18_24,
+                                wind_speed = :wind_speed,
+                                wind_direction = :wind_direction,
+                                public_time = :public_time,
+                                public_time_formatted = :public_time_formatted,
+                                headline = :headline,
+                                bodytext = :bodytext,
+                                text = :text,
+                                date = :set_date,
+                                date_label = :date_label,
+                                updated_at = now()
+                                where user_id = :user_id
+                                and city_id = :city_id
+                                and date = :where_date
+                                ';
+        $stmt = $pdo->prepare($weather_today);
+        $stmt->execute(array(
+                ':weather'=>$weather,
+                ':min_temperature'=>$min_temp,
+                ':max_temperature'=>$max_temp,
+                ':precipitation_t00_06'=>$chance_of_rain_0006,
+                ':precipitation_t06_12'=>$chance_of_rain_0612,
+                ':precipitation_t12_18'=>$chance_of_rain_1218,
+                ':precipitation_t18_24'=>$chance_of_rain_1824,
+                ':wind_speed'=>$wind_speed,
+                ':wind_direction'=>$wind_direction,
+                ':public_time'=>$public_time,
+                ':public_time_formatted'=>$public_time_formatted,
+                ':headline'=>$head_line_text,
+                ':bodytext'=>$body_text,
+                ':text'=>$text,
+                ':set_date'=>$date,
+                ':where_date'=>$date,
+                ':date_label'=>$date_label,
+                ':user_id'=>$user_id,
+                ':city_id'=>$city_id
+            ));
+            if ($stmt->rowCount() === 0) {
+                $weather_insert = 'insert into weather_setting 
+                                ( 
+                                user_id,prefecture,city,city_id,weather,min_temperature,max_temperature,precipitation_t00_06,
+                                precipitation_t06_12,precipitation_t12_18, precipitation_t18_24,wind_speed,wind_direction,public_time,
+                                public_time_formatted,headline, bodytext,text,date,date_label,created_at,updated_at 
+                                ) 
+                                values 
+                                ( 
+                                :user_id,:prefecture,:city,:city_id,:weather,:min_temperature,:max_temperature,:precipitation_t00_06,
+                                :precipitation_t06_12,:precipitation_t12_18, :precipitation_t18_24,:wind_speed,:wind_direction,:public_time,
+                                :public_time_formatted,:headline, :bodytext,:text,:date,:date_label,now(),now() 
+                                )';
+                $stmt = $pdo->prepare($weather_insert);
+                $stmt->execute(array( 
+                                ':user_id'=>$user_id, 
+                                ':prefecture'=>$user_info['prefecture'], 
+                                ':city'=>$user_info['city'],
+                                ':city_id'=>$city_id,
+                                ':weather'=>$weather, 
+                                ':min_temperature'=>$min_temp, 
+                                ':max_temperature'=>$max_temp, 
+                                ':precipitation_t00_06'=>$chance_of_rain_0006, 
+                                ':precipitation_t06_12'=>$chance_of_rain_0612, 
+                                ':precipitation_t12_18'=>$chance_of_rain_1218, 
+                                ':precipitation_t18_24'=>$chance_of_rain_1824, 
+                                ':wind_speed'=>$wind_speed, 
+                                ':wind_direction'=>$wind_direction, 
+                                ':public_time'=>$public_time, 
+                                ':public_time_formatted'=>$public_time_formatted, 
+                                ':headline'=>$head_line_text, 
+                                ':bodytext'=>$body_text, 
+                                ':text'=>$text, 
+                                ':date'=>$date,
+                                ':date_label'=>$date_label
                             ));
+            }
         }
     }
         
