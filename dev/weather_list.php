@@ -5,6 +5,33 @@ error_reporting(E_ALL);
 //ファイルをインポート
 require_once('config.php');
 require_once('functions.php');
+
+//Session宣言
+session_start();
+
+//ログインチェック機能
+if (!isset($_SESSION['USER'])) {
+    header('Location:'.SITE_URL.'/index.php');
+    exit;
+}
+
+$user = $_SESSION['USER'];
+$weather_info = array();
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    //CSRF対策
+    setToken();
+
+    //DB接続
+    $pdo = connectDb();
+    //SQL
+    $sql = 'select * from weather_setting where user_id = :user_id order by created_at';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array(':user_id'=>$user['id']));
+    $weather_info = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    unset($pdo);
+}
 ?>
 
 <!DOCTYPE html>
@@ -41,22 +68,35 @@ require_once('functions.php');
            <div class="table-responsive">
                 <table class="table table-bordered table-striped" width="100%" border="1">
                     <tr>
-                        <th>地域</th><th>日付</th><th>天気</th><th>最高気温</th><th>最低気温</th><th>降水確率</th><th>風向き</th><th>風速</th><th>予報日</th><th></th>
+                        <th>地域</th>
+                        <th>日付</th>
+                        <th>天気</th>
+                        <th>最高気温</th>
+                        <th>最低気温</th>
+                        <th>降水確率(0時-6時)</th>
+                        <th>降水確率(6時-12時)</th>
+                        <th>降水確率(12時-18時)</th>
+                        <th>降水確率(18時-24時)</th>
+                        <th>風向き</th>
+                        <th>風速</th>
+                        <th>予報日</th>
                     </tr>
-                    <//?php foreach($users as $user): ?>
+                    <?php foreach($weather_info as $weather): ?>
                         <tr>
-                            <td><?php echo '例：東京都千代田区'; //xss($user['user_name']); ?></td>
-                            <td><?php echo '例：今日'; //xss($user['user_name']); ?></td>
-                            <td><?php echo '例：曇り'; //xss($user['user_email']); ?></td>
-                            <td><?php echo '例：25℃'; //xss($user['created_at']); ?></td>
-                            <td><?php echo '例：17℃'; //xss($user['created_at']); ?></td>
-                            <td><?php echo '例：0%'; //xss($user['created_at']); ?></td>
-                            <td><?php echo '例：北の風'; //xss($user['created_at']); ?></td>
-                            <td><?php echo '例：0.5メートル'; //xss($user['created_at']); ?></td>
-                            <td><?php echo '例：今日'; //xss($user['created_at']); ?></td>
-                            <td><a href="weather_delete.php?id=<?php echo 'user_id' //$user['id']; ?>" >[削除]</a></td>
+                            <td><?php echo xss($weather['prefecture'].$weather['city']); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['date_label'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['weather'])); ?></td>
+                            <td><?php echo xss(displayTemperature($weather['max_temperature'])); ?></td>
+                            <td><?php echo xss(displayTemperature($weather['min_temperature'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['precipitation_t00_06'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['precipitation_t06_12'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['precipitation_t12_18'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['precipitation_t18_24'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['wind_direction'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['wind_speed'])); ?></td>
+                            <td><?php echo xss(displayWeatherValue($weather['date'])); ?></td>
                         </tr>
-                    <//?php endforeach; ?>
+                    <?php endforeach; ?>
                 </table>
             </div>
             <a href="./home.php">戻る</a>

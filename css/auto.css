@@ -14,3 +14,9 @@ body {
 #main .jumbotron h1 {
 	font-size:53px;
 }
+
+/* weather_list.php, admin_user_list.phpに反映 */
+.table td,
+.table th {
+	white-space: nowrap;
+}
