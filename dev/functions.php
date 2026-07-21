@@ -155,4 +155,20 @@ function delete_auto_login($c_key) {
     //Cookieを削除
     setcookie('WEATHER', '', time()-86400, COOKIE_PATH);
 }
+
+//天気情報(NULLもしくは意図的なデータ無表記を統一)
+function displayWeatherValue($value) {
+    if ($value === null || $value === '--%' || $value === '--') {
+        return 'データなし';
+    }
+    return $value;
+}
+
+//天気情報(NULLもしくは意図的なデータ無表記を統一)気温専用
+function displayTemperature($value) {
+    if ($value === null || $value === '--%' || $value === '--') {
+        return 'データなし';
+    }
+    return $value.'℃';
+}
 ?>

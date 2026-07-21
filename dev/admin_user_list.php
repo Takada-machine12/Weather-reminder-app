@@ -18,10 +18,11 @@ if (!isset($_SESSION['ADMIN_USER'])) {
 $admin_user = $_SESSION['ADMIN_USER'];
 $users = array();
 
-//CSRF対策
-setToken();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    //CSRF対策
+    setToken();
+
     //DB接続
     $pdo = connectDb();
 
@@ -30,8 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $stmt = $pdo->prepare($sql);
     $stmt->execute();
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    //データ確認
-    // var_dump($user);
 
     unset($pdo);
 }

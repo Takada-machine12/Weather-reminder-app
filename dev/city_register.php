@@ -23,6 +23,10 @@ $user = $_SESSION['USER'];
 //変数初期化
 $error = array();
 $complete_message = '';
+$register_city = array();
+
+//DB接続
+$pdo = connectDb();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     //CSRF対策
@@ -35,6 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     //変数初期化
     $pref_no = 99;
     $city = $cities[99];
+
+    //登録した地域を取得しHTMLで表示させる
+    $weather_list = 'select
+                        prefecture
+                        ,city_id
+                        ,city
+                    from weather_setting
+                    where user_id = :user_id
+                    group by prefecture, city_id, city
+                    order by prefecture, city';
+    $stmt = $pdo->prepare($weather_list);
+    $stmt->execute(array(':user_id'=>$user['id']));
+    $register_city = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } else {
     //CSRF対策
     checkToken();
@@ -47,28 +64,36 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         //「決定」ボタン押下時、都道府県Noで市区町村名を逆引きで取得
         $city = $cities[$pref_no];
     } elseif (isset($_POST['register'])) {
-        //「登録」ボタン押下時、DBに情報を登録
-        //DB接続
-        $pdo = connectDb();
-        //SQL
-        $sql = 'insert into weather_setting (user_id, prefecture, city, city_id, created_at, updated_at)
-                values(:user_id, :prefecture, :city, :city_id, now(), now())';
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute(array(
-                        ':user_id'=>$user['id'],
-                        ':prefecture'=>$prefectures[$pref_no],
-                        ':city'=>$cities[$pref_no][$_POST['city']],
-                        ':city_id'=>$_POST['city']
-                    ));
+        //登録前に存在チェック
+        $sql_cnt = 'select count(*) from weather_setting where user_id = :user_id and city_id = :city_id';
+        $stmt = $pdo->prepare($sql_cnt);
+        $stmt->execute(array(':user_id'=>$user['id'],':city_id'=>$_POST['city']));
+        $cnt = (int)$stmt->fetchColumn();
+        
+        if ($cnt === 0) {
+            //「登録」ボタン押下時、DBに情報を登録
+            //SQL
+            $sql = 'insert into weather_setting (user_id, prefecture, city, city_id, created_at, updated_at)
+                    values(:user_id, :prefecture, :city, :city_id, now(), now())';
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute(array(
+                            ':user_id'=>$user['id'],
+                            ':prefecture'=>$prefectures[$pref_no],
+                            ':city'=>$cities[$pref_no][$_POST['city']],
+                            ':city_id'=>$_POST['city']
+                        ));
 
-        //天気情報取得関数呼び出し
-        //DBへデータを格納
-        updateWeatherData($user['id'],$_POST['city'],$pdo);
+            //天気情報取得関数呼び出し
+            //DBへデータを格納
+            updateWeatherData($user['id'],$_POST['city'],$pdo);
 
-        unset($pdo);
-        $complete_message = '地域の登録が完了しました。';
+            $complete_message = '地域の登録が完了しました。';
+        } else {
+            $error['register_city'] = 'この地域は既に登録されています。';
+        }
     }
 }
+unset($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -131,12 +156,38 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                     <span class="help-block"><?php echo $error['city'] ?? ''; ?></span>
                 </div><!-- form-group -->
 
-                <div class="form-group">
+                <div class="form-group <?php if(!empty($error['register_city'])) {echo "has-error";}?>">
                     <input type="submit" name="register" class="btn btn-success btn-block" value="登録" />
+                    <span class="help-block"><?php echo $error['register_city'] ?? ''; ?></span>
                 </div><!-- form-group -->
                 <!-- トークンをPOSTで送信 -->
                 <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken'] ?? ''); ?>" />
             </form>
+
+            <!-- 登録した地域を表示 -->
+            <h3>登録済み地域</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped"  width="100%" border="1">
+                    <tr>
+                        <th>地域</th>
+                        <th></th>
+                    </tr>
+                    <?php foreach($register_city as $city):?>
+                        <tr>
+                            <td>
+                                <?php echo xss($city['prefecture'].' '.$city['city']);?>
+                            </td>
+                            <td>
+                                <form action="city_delete.php" method="POST" style="margin:0;">
+                                    <input type="hidden" name="city_id" value="<?php echo xss($city['city_id']);?>">
+                                    <input type="hidden" name="token" value="<?php echo xss($_SESSION['sstoken']);?>">
+                                    <input type="submit" value="削除" class="btn btn-danger bnt-sm">
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach;?>
+                </table>
+            </div>
             <a href="./home.php">戻る</a>
             <hr>
             <footer class="footer">
