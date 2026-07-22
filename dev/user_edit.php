@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $error['user_email'] = '形式が正しくありません。正しい形式のメールアドレスを入力してください。';
         } else {
             if (checkUserEmail($user_email,$id,$pdo)) {
-                $error['user_email'] = 'このメールアドレスは既に使用されています。';
+                $error['user_email'] = 'このメールアドレスは既に登録されています。';
             }
         }
 
